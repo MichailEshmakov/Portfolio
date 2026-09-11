@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Портфолио — игры</title>
+<meta name="description" content="Портфолио разработчика игр: список проектов, платформы, ссылки на игру и исходники.">
+<meta property="og:title" content="Портфолио — игры">
+<meta property="og:description" content="Список игр, которые я сделал.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎮</text></svg>">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<a class="skip" href="#games">К списку игр</a>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="hero__role" data-profile="role"></p>
+    <h1 class="hero__name" data-profile="name"></h1>
+    <p class="hero__tagline" data-profile="tagline"></p>
+    <nav class="hero__links" data-profile="links" aria-label="Контакты"></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section id="games" aria-labelledby="games-title">
+    <div class="section-head">
+      <h2 id="games-title">Игры</h2>
+      <div class="filters" id="filters" role="group" aria-label="Фильтр по платформе"></div>
+    </div>
+    <ul class="grid" id="grid"></ul>
+    <p class="empty" id="empty" hidden>Пока ничего нет.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>© <span id="year"></span> <span data-profile="name"></span></p>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>
