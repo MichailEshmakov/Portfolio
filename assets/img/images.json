@@ -16,10 +16,13 @@
     "Fate: Rise of Heroes. Match for glory":      { "icon": "2024/Rise of Heroes Icon.jpg",            "shots": ["2024/Rise of Heroes Screenshot.jpg"] },
     "Телекинез Спасение!":                        { "icon": "2024/Телекинез Спасение Icon.png",        "shots": ["2024/Телекинез Спасение Screenshot.gif"] },
     "Шум дождя. Звук на фон для релакса и работы":{ "icon": "2024/Rain Noise Icon.png",                "shots": ["2024/Rain Noise Screenshot.jpg"] },
+    "5 ночей с Бу! Испугался?":                    { "icon": "2024/Cat Bu Icon.png",                    "shots": ["2024/Cat Bu Screenshot.gif"] },
+    "Соединяй фрукты: 3д арбуз 2048":              { "icon": "2024/Watermelon Icon.png",                "shots": ["2024/Watermelon Screenshot.gif"] },
     "Построй лабиринт":                           { "icon": "2024/Build A Maze Icon.png",              "shots": ["2024/Build A Maze Screenshot.gif"] },
     "Белый шум поможет спать ребенку":            { "icon": "2024/White Noise Icon.png",               "shots": ["2024/White Noise Screenshot.png"] },
 
     "Цветной след за черным шаром. Расслабься":   { "icon": "2024/Raninball Icon.png",                 "shots": ["2024/Raninball Screenshot.png.gif"] },
+    "Дети: Угадай по форме!":                     { "icon": "2023/Guess with form Icon.png",           "shots": ["2023/Guess with form Screenshot.gif"] },
     "Прыг Клик / Двоечник пытается считать":      { "icon": "2023/Прыг Клик Icon.jpg",                 "shots": ["2023/Прыг Клик Screenshot.png"] },
     "Autobattle Dungeon AFK RPG":                 { "icon": "2023/Autobattle Dungeon AFK RPG Icon.png","shots": ["2023/Autobattle Dungeon AFK RPG Screenshot.png"] },
 

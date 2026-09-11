@@ -196,8 +196,7 @@ img { max-width: 100%; display: block; }
 /* ---------- панель поиска и фильтров ---------- */
 
 .toolbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 20;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px);
@@ -280,22 +279,69 @@ img { max-width: 100%; display: block; }
   color: color-mix(in srgb, var(--muted) 75%, transparent);
 }
 
-/* ползунок важности */
+/* ---------- плашка важности: главный фильтр, вынесен из общего ряда ---------- */
+
+.score {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  padding: 8px 16px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-card));
+}
+
+.score__label {
+  flex: none;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.score__value {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 8px;
+  margin-left: 2px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* ползунок и подписи делений под ним — одной колонкой;
+   ползунок короткий, как у прочих полей панели */
+.score__slider {
+  flex: 0 1 170px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.score__ticks {
+  display: flex;
+  justify-content: space-between;
+  padding-inline: 3px;      /* примерно на половину ручки ползунка */
+  margin-top: -6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* подсказка — отдельной строкой под ползунком */
+.score .hint { flex: 1 0 100%; }
+
 input[type="range"] {
   width: 100%;
   min-width: 0;
   margin: 0;
   padding: 0;
-  height: 38px;             /* вровень с соседними полями */
+  height: 30px;
   accent-color: var(--accent);
   cursor: pointer;
-}
-
-output#score-out {
-  display: inline-block;
-  min-width: 1.2em;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
 }
 
 input[type="search"], select {
@@ -340,9 +386,37 @@ input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visib
 
 .empty { color: var(--muted); padding-block: 30px; }
 
+/* подпись в самом низу списка: это ещё не все игры */
+.more {
+  margin: 0 0 40px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.more__head { margin: 0 0 6px; color: var(--text); font-weight: 600; }
+.more__line { margin: 4px 0 0; }
+
+/* кнопка внутри подписи — как ссылка, только действует на фильтры */
+.more__btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.more__btn:hover { text-decoration-thickness: 2px; }
+.more__btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* ---------- список по годам ---------- */
 
-.list { padding-block: 4px 44px; }
+.list { padding-block: 4px 28px; }
 
 .year {
   display: flex;
@@ -439,6 +513,16 @@ input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visib
   background: var(--chip);
 }
 
+/* главное действие — прямо под скриншотом, во всю его ширину */
+.card__play {
+  display: flex;
+  margin-top: 2px;
+}
+.card__play .btn {
+  flex: 1;
+  justify-content: center;
+}
+
 /* строки «поле → значение» */
 .props {
   margin: 0;
@@ -468,6 +552,59 @@ body.show-extra .prop--extra { display: grid; }
   margin-top: 16px;
 }
 
+/* ---------- быстрый переход между группами ---------- */
+
+/* Кнопка слева, сразу под панелью фильтров (её высоту ставит скрипт в --jump-top).
+   Показывается одна: листаешь вниз — стрелка к следующей группе, листаешь
+   вверх — к предыдущей. На подписи стоит та группа, куда кнопка приведёт,
+   поэтому год или ступень важности пролистываются одним кликом.
+   На широком экране кнопка стоит сбоку от колонки и ничего не закрывает. */
+.jump {
+  position: fixed;
+  left: max(12px, calc((100vw - var(--wrap)) / 2 - 150px));
+  top: var(--jump-top, 120px);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+/* класс появляется, когда страницу пролистали вниз */
+.jump--on { opacity: 1; transform: none; pointer-events: auto; }
+
+.jump__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(50vw, 260px);
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 2px 6px rgba(0,0,0,.28), 0 10px 26px color-mix(in srgb, var(--accent) 45%, transparent);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.jump__btn:hover { filter: brightness(1.08); }
+.jump__btn:active { transform: translateY(1px); }
+.jump__btn:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+.jump__arrow { flex: none; font-size: 17px; line-height: 1; }
+.jump__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------- подвал ---------- */
 
 .footer {
@@ -491,6 +628,7 @@ body.show-extra .prop--extra { display: grid; }
   .hero__inner { padding-block: 34px 24px; }
   .field--search { flex: 1 1 100%; }
   .filters .field { flex: 1 1 140px; }
+  .score { gap: 2px 12px; padding: 8px 12px 10px; }
   .count { margin-left: 0; }
   .card { padding: 14px 16px 16px; }
   .card__head { --icon: 38px; }
@@ -498,8 +636,11 @@ body.show-extra .prop--extra { display: grid; }
   .card__shots { float: none; width: auto; margin: 0 0 14px; }
   .prop { grid-template-columns: 1fr; gap: 2px; }
   .prop dt { font-size: 13px; }
+  .jump { left: 12px; gap: 6px; }
+  .jump__btn { padding: 9px 13px; font-size: 13.5px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .jump { transition: none; }
 }

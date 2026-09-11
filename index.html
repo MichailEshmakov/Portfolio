@@ -53,24 +53,27 @@
         <span class="hint">можно убрать казуальные игры из поиска</span>
       </p>
 
-      <p class="field" id="field-role" hidden>
-        <label for="role">Роль</label>
-        <select id="role"><option value="">любая</option></select>
-      </p>
-
-      <p class="field" id="field-score" hidden>
-        <label for="score">Важность от <output id="score-out" for="score">1</output></label>
-        <input id="score" type="range" min="0" max="5" step="1" value="1">
-        <span class="hint">можете оставить только хорошие</span>
-      </p>
+      <!-- сюда скрипт ставит фильтры-списки (роль, 2D/3D, найм, площадка):
+           они описаны в CONFIG.pickFilters в assets/js/main.js -->
 
       <p class="field" id="field-sort">
         <label for="sort">Сортировка</label>
         <select id="sort">
-          <option value="date">сначала дата, потом важность</option>
           <option value="score">сначала важность, потом дата</option>
+          <option value="date">сначала дата, потом важность</option>
         </select>
       </p>
+    </div>
+
+    <div class="score" id="field-score" hidden>
+      <label class="score__label" for="score">Важность от
+        <output class="score__value" id="score-out" for="score">3</output>
+      </label>
+      <span class="score__slider">
+        <input id="score" type="range" min="1" max="5" step="1" value="3">
+        <span class="score__ticks" id="score-ticks" aria-hidden="true"></span>
+      </span>
+      <span class="hint" id="score-hint">можете оставить только хорошие</span>
     </div>
   </div>
 </div>
@@ -79,6 +82,7 @@
   <p class="status" id="status">Загружаю данные из таблицы…</p>
   <div id="list" class="list"></div>
   <p class="empty" id="empty" hidden>Ничего не нашлось. Попробуй изменить запрос или сбросить фильтры.</p>
+  <div class="more" id="more" hidden></div>
 </main>
 
 <footer class="footer">
@@ -88,6 +92,17 @@
   </div>
 </footer>
 
+
+<nav class="jump" id="jump" aria-label="Переход между группами">
+  <button class="jump__btn" id="jump-up" type="button" hidden>
+    <span class="jump__arrow" aria-hidden="true">↑</span>
+    <span class="jump__label" id="jump-up-label"></span>
+  </button>
+  <button class="jump__btn" id="jump-down" type="button" hidden>
+    <span class="jump__arrow" aria-hidden="true">↓</span>
+    <span class="jump__label" id="jump-down-label"></span>
+  </button>
+</nav>
 
 <script src="assets/js/main.js"></script>
 </body>

@@ -44,12 +44,13 @@ const CONFIG = {
     play:     ['поиграть', 'играть', 'ссылка', 'play', 'демо'],
     shots:    ['скрины', 'скриншоты', 'скрин', 'обложка', 'картинки', 'screenshots'],
     dim:      ['2д/3д', '2d/3d', 'размерность'],
+    hire:     ['делал ли в найме', 'в найме', 'найм', 'занятость', 'hire'],
     score:    ['оценка важности', 'важность', 'приоритет', 'score'],
     year:     ['год', 'year'],
   },
 
   /* Поля, которые показываем чипсами, а не сплошным текстом. */
-  chipFields: ['genre', 'tags', 'platform', 'tech', 'role', 'dim'],
+  chipFields: ['genre', 'tags', 'platform', 'tech', 'role', 'dim', 'hire'],
 
   /* Служебные колонки: в карточке не показываем никогда.
      Поиск и фильтр по ним при этом работают.
@@ -79,16 +80,33 @@ const CONFIG = {
   filterField: 'genre',
   filterFallback: 'tags',
 
+  /* Простые фильтры-списки: колонка -> выпадающий список, в котором
+     выбирают одно значение. Игра подходит, если это значение есть
+     среди её значений в колонке («Steam, Яндекс Игры» подойдёт обоим).
+     Колонки, которой нет в таблице, — нет и фильтра: поле скрыто.
+     id — это и id элемента в разметке, и имя параметра в адресе страницы. */
+  pickFilters: [
+    { id: 'role',     role: 'role',     label: 'Роль',     empty: 'любая' },
+    { id: 'dim',      role: 'dim',      label: '2D / 3D',  empty: 'любая' },
+    { id: 'hire',     role: 'hire',     label: 'Найм',     empty: 'любой' },
+    { id: 'platform', role: 'platform', label: 'Площадка', empty: 'любая' },
+  ],
+
   /* Ползунок «важность от»: ниже этой оценки игры не показываем.
-     Шкалу ползунка берём из самой таблицы, а этот максимум — запасной,
+     Важности 0 в таблице не бывает, поэтому левая граница ползунка — 1:
+     на ней порог никого не отсекает, это и есть значение по умолчанию.
+     Шкалу ползунка берём из самой таблицы, а максимум ниже — запасной,
      если колонка с оценками пустая. У игры без оценки важность считается
-     равной scoreWhenMissing — она ведёт себя как обычная игра с такой оценкой. */
-  minScoreDefault: 1,
+     равной scoreWhenMissing — она ведёт себя как обычная игра с такой оценкой.
+     scoreDefault — с какого порога страница открывается: сразу видны игры,
+     которые стоит смотреть, а под списком написано, сколько ещё есть ниже. */
+  scoreMin: 1,
+  scoreDefault: 3,
   scoreWhenMissing: 2,
   scoreMaxFallback: 5,
 
-  /* Порядок по умолчанию: сначала года, внутри года — по важности. */
-  sortDefault: 'date',
+  /* Порядок по умолчанию: сначала важность, внутри ступени — по дате. */
+  sortDefault: 'score',
 
   /* Сколько картинок качаем одновременно. 1 — строго по очереди сверху вниз. */
   shotsAtOnce: 1,
@@ -113,6 +131,7 @@ function norm(s) {
     .replace(/ /g, ' ')
     .toLowerCase()
     .replace(/ё/g, 'е')
+    .replace(/[-–—]+/g, ' ')
     .replace(/[\s\t]+/g, ' ')
     .replace(/[:：.]+$/, '')
     .trim();
@@ -130,6 +149,46 @@ function splitList(value) {
     .split(/[,;/|\n]+/)
     .map((v) => v.trim())
     .filter(Boolean);
+}
+
+/** Значение перечисления для показа: первое слово с большой буквы,
+    остальное — как в таблице, чтобы не испортить «C#», «2D» и «HTML5». */
+function capitalize(value) {
+  const v = String(value || '').trim();
+  return v ? v[0].toLocaleUpperCase('ru') + v.slice(1) : v;
+}
+
+/* Одно и то же значение в таблице встречается в разном регистре
+   («Unity», «unity», «UNITY»). Фильтры сравнивают значения без регистра,
+   поэтому в списках такое значение должно быть одно и с одним написанием:
+   для каждого значения выбираем самое частое в таблице написание
+   и пишем его с большой буквы. */
+const labels = new Map();        // значение без регистра → как показываем
+
+function collectLabels(games) {
+  const votes = new Map();
+  games.forEach((game) => game.fields.forEach((field) => {
+    if (!CONFIG.chipFields.includes(field.role)) return;
+    splitList(field.value).forEach((raw) => {
+      const key = norm(raw);
+      if (!key) return;
+      const spellings = votes.get(key) || new Map();
+      spellings.set(raw, (spellings.get(raw) || 0) + 1);
+      votes.set(key, spellings);
+    });
+  }));
+
+  labels.clear();
+  votes.forEach((spellings, key) => {
+    // при равной частоте остаётся написание, встреченное в таблице первым
+    const best = [...spellings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    labels.set(key, capitalize(best));
+  });
+}
+
+/** Как показать значение перечисления — одинаково в чипсах и в фильтрах. */
+function labelOf(raw) {
+  return labels.get(norm(raw)) || capitalize(raw);
 }
 
 function extractUrls(value) {
@@ -434,6 +493,13 @@ function readMetaLinks(rows, headerIndex) {
   return links;
 }
 
+/** Значения игры по каждому фильтру-списку: «Steam, Яндекс Игры» -> два значения. */
+function pickValues(byRole) {
+  const picks = {};
+  CONFIG.pickFilters.forEach((f) => { picks[f.id] = splitList(byRole[f.role] || ''); });
+  return picks;
+}
+
 /** Содержательные колонки: если хоть одна заполнена — это игра, а не разделитель года. */
 const CONTENT_ROLES = ['genre', 'desc', 'role', 'platform', 'play', 'tech', 'tags', 'goal'];
 
@@ -529,7 +595,7 @@ function buildModel(csvText, folderImages) {
       order: games.length,          // порядок строк в таблице — он же порядок по дате
       score: rated === null ? CONFIG.scoreWhenMissing : rated,
       rated: rated !== null,        // оценка стоит в таблице, а не подставлена
-      roles: splitList(byRole.role || ''),
+      picks: pickValues(byRole),
       genres: splitList(byRole[CONFIG.filterField] || byRole[CONFIG.filterFallback] || ''),
       // в поиск попадает всё, включая спрятанные поля
       search: norm([title, year, ...fields.map((f) => f.value)].join(' ')),
@@ -544,9 +610,11 @@ function buildModel(csvText, folderImages) {
    -------------------------------------------------------------------------- */
 
 const state = {
-  games: [], genreOptions: [], roles: [],
-  q: '', include: [], exclude: [], role: '',
-  minScore: CONFIG.minScoreDefault,
+  games: [], genreOptions: [],
+  // по фильтру-списку: pickOptions — что есть в таблице, picked — что выбрано
+  pickOptions: {}, picked: {},
+  q: '', include: [], exclude: [],
+  minScore: CONFIG.scoreDefault,
   scoreMax: CONFIG.scoreMaxFallback,
   sort: CONFIG.sortDefault,
   showExtra: false,
@@ -566,7 +634,7 @@ function valueHtml(field) {
     const parts = splitList(field.value);
     if (parts.length) {
       return '<span class="chips">' +
-        parts.map((p) => '<span class="chip">' + esc(p) + '</span>').join('') + '</span>';
+        parts.map((p) => '<span class="chip">' + esc(labelOf(p)) + '</span>').join('') + '</span>';
     }
   }
 
@@ -598,23 +666,32 @@ function cardHtml(game) {
       '<dd>' + valueHtml(f) + '</dd></div>';
   }).join('');
 
-  const gallery = game.images.length
-    ? '<div class="card__shots">' + game.images.map((img) =>
-        '<a class="shot" href="' + esc(img.url) + '" target="_blank" rel="noopener" ' +
-        'data-fallback="' + esc(prettyUrl(img.url)) + '">' +
-        '<img class="shot__img" data-src="' + esc(img.src) + '" alt="" decoding="async">' +
-        '</a>').join('') + '</div>'
-    : '';
-
   // Ссылки из колонки со скринами кнопками не дублируем: они уже в галерее,
   // а не открывшаяся картинка сама превратится там в ссылку.
-  const actions = game.fields
+  const links = game.fields
     .filter((f) => !CONFIG.hiddenFields.includes(f.role) && f.role !== 'shots')
     .flatMap((f) => extractUrls(f.value).map((u) => ({ label: f.label, url: u, role: f.role })))
-    .filter((a) => !asImage(a.url))
-    .map((a) => '<a class="btn' + (a.role === 'play' ? ' btn--primary' : '') + '" href="' + esc(a.url) +
-      '" target="_blank" rel="noopener">' + esc(a.label) + '</a>')
-    .join('');
+    .filter((a) => !asImage(a.url));
+
+  const btnHtml = (a) => '<a class="btn' + (a.role === 'play' ? ' btn--primary' : '') +
+    '" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.label) + '</a>';
+
+  // «Поиграть» стоит прямо под скриншотом — это главное действие карточки.
+  const play = links.filter((a) => a.role === 'play').map(btnHtml).join('');
+  const actions = links.filter((a) => a.role !== 'play').map(btnHtml).join('');
+
+  const shots = game.images.map((img) =>
+    '<a class="shot" href="' + esc(img.url) + '" target="_blank" rel="noopener" ' +
+    'data-fallback="' + esc(prettyUrl(img.url)) + '">' +
+    '<img class="shot__img" data-src="' + esc(img.src) + '" alt="" decoding="async">' +
+    '</a>').join('');
+
+  // Без скриншотов «поиграть» остаётся в общем ряду кнопок под карточкой.
+  const gallery = shots
+    ? '<div class="card__shots">' + shots +
+      (play ? '<div class="card__play">' + play + '</div>' : '') + '</div>'
+    : '';
+  const buttons = shots ? actions : play + actions;
 
   const icon = game.icon
     ? '<img class="card__icon" data-src="' + esc(game.icon) + '" alt="" decoding="async">'
@@ -629,7 +706,7 @@ function cardHtml(game) {
     '<div class="card__body">' +
       gallery +
       (props ? '<dl class="props">' + props + '</dl>' : '') +
-      (actions ? '<div class="card__actions">' + actions + '</div>' : '') +
+      (buttons ? '<div class="card__actions">' + buttons + '</div>' : '') +
     '</div>' +
   '</article>';
 }
@@ -667,13 +744,14 @@ function groupsOf(games) {
 }
 
 function render() {
-  const visible = state.games.filter(matches);
+  const visible = state.games.filter((game) => matches(game));
   const groups = groupsOf(visible);
 
   $('#list').innerHTML = groups.map((group) =>
     '<section class="year-block">' +
       '<div class="year"><h2>' + esc(group.title) + '</h2>' +
-      '<span>' + group.items.length + '</span></div>' +
+      '<span>' + group.items.length + ' ' +
+      plural(group.items.length, 'игра', 'игры', 'игр') + '</span></div>' +
       group.items.map(cardHtml).join('') +
     '</section>'
   ).join('');
@@ -684,6 +762,55 @@ function render() {
   $('#count').textContent = visible.length === state.games.length
     ? state.games.length + ' ' + plural(state.games.length, 'проект', 'проекта', 'проектов')
     : visible.length + ' из ' + state.games.length;
+
+  renderMore(visible.length);
+  updateJump();
+}
+
+/** Сколько игр не видно: отдельно из-за порога важности, отдельно из-за
+    остальных фильтров. К порогу относим только те игры, которые прошли бы
+    все прочие условия, — иначе одна игра попала бы в оба числа. */
+function hiddenCounts() {
+  // На левой границе порог уже ничего не прячет — и опустить его ниже нельзя,
+  // поэтому про важность в этом случае говорить не о чем.
+  const threshold = state.minScore > CONFIG.scoreMin ? state.minScore : -Infinity;
+  let byScore = 0;
+  let byOthers = 0;
+
+  state.games.forEach((game) => {
+    if (!matchesExceptScore(game)) byOthers++;
+    else if (game.score < threshold) byScore++;
+  });
+
+  return { byScore, byOthers };
+}
+
+/** Подпись под списком: список закончился, но это ещё не все игры. Она стоит
+    в самом низу страницы, поэтому попадается на глаза как раз тогда, когда
+    список долистан до конца, и только если что-то действительно спрятано. */
+function renderMore(shown) {
+  const box = $('#more');
+  const { byScore, byOthers } = hiddenCounts();
+
+  if (!byScore && !byOthers) { box.hidden = true; box.innerHTML = ''; return; }
+
+  const lines = [];
+  if (byScore) {
+    lines.push('Порог важности прячет ещё ' + byScore + ' ' +
+      plural(byScore, 'игру', 'игры', 'игр') + '. ' +
+      '<button class="more__btn" type="button" data-more="score">' +
+      'Снизить важность до ' + showNumber(CONFIG.scoreMin) + '</button>');
+  }
+  if (byOthers) {
+    lines.push('Остальные фильтры прячут ещё ' + byOthers + ' ' +
+      plural(byOthers, 'игру', 'игры', 'игр') + '. ' +
+      '<button class="more__btn" type="button" data-more="reset">Сбросить фильтры</button>');
+  }
+
+  box.hidden = false;
+  box.innerHTML = '<p class="more__head">Это не все игры: показано ' + shown +
+    ' из ' + state.games.length + '.</p>' +
+    lines.map((line) => '<p class="more__line">' + line + '</p>').join('');
 }
 
 /** Картинки грузятся не все разом, а по очереди — в том порядке, в каком
@@ -726,14 +853,21 @@ function showShotFallback(img) {
 }
 
 function matches(game) {
+  return matchesExceptScore(game) && game.score >= state.minScore;
+}
+
+/** Все условия, кроме порога важности. Порог отделён, чтобы под списком
+    можно было сказать, сколько игр прячет именно он. */
+function matchesExceptScore(game) {
   // Выбрано несколько жанров — подойдёт любой из них; «кроме» убирает игру,
   // если у неё есть хоть один из отброшенных жанров.
   const genres = game.genres.map(norm);
   if (state.include.length && !genres.some((g) => state.include.includes(g))) return false;
   if (state.exclude.length && genres.some((g) => state.exclude.includes(g))) return false;
-  if (state.role && !game.roles.some((r) => norm(r) === state.role)) return false;
-
-  if (game.score < state.minScore) return false;
+  for (const f of CONFIG.pickFilters) {
+    const want = state.picked[f.id];
+    if (want && !game.picks[f.id].some((v) => norm(v) === want)) return false;
+  }
 
   if (state.q) {
     const terms = state.q.split(/\s+/).filter(Boolean);
@@ -743,7 +877,149 @@ function matches(game) {
 }
 
 /* --------------------------------------------------------------------------
-   7. Фильтры, переключатели, тема
+   7. Быстрый переход между группами
+   -------------------------------------------------------------------------- */
+
+/* Кнопка слева под панелью фильтров. Показывается одна — та, куда человек
+   сейчас едет: листает вниз — «↓ 2021», к следующей группе; листает вверх —
+   «↑ 2023», к предыдущей. Так год (или ступень важности — смотря что выбрано
+   в сортировке) листается целиком одним кликом. Кнопка остаётся на экране
+   после остановки и меняется только тогда, когда сменилось направление,
+   иначе по ней не успеть кликнуть.
+   Вверх — сначала к началу группы, которую сейчас читаешь, и только от самого
+   её начала к предыдущей: как перемотка треков. */
+
+const JUMP = {
+  gap: 12,      // на сколько ниже панели фильтров встаёт заголовок после перехода
+  slack: 6,     // запас на дробные пиксели: без него повторный клик мог не сработать
+  near: 140,    // ближе этого к линии считаем, что группа только началась
+  show: 220,    // с какой прокрутки показываем кнопку
+  turn: 24,     // столько нужно проехать в обратную сторону, чтобы кнопка сменилась
+};
+
+/** Линия, выше которой всё считается пролистанным: низ закреплённой панели, если она есть. */
+function jumpLine() {
+  const bar = $('#toolbar');
+  const stuck = bar && ['sticky', 'fixed'].includes(getComputedStyle(bar).position);
+  return (stuck ? bar.getBoundingClientRect().height : 0) + JUMP.gap;
+}
+
+function jumpTitle(heading) {
+  const h2 = heading.querySelector('h2');
+  return h2 ? h2.textContent : '';
+}
+
+function scrollToHeading(heading) {
+  const y = window.scrollY + heading.getBoundingClientRect().top - jumpLine();
+  scrollPage(Math.max(0, y));
+}
+
+function scrollPage(top) {
+  const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top, behavior: still ? 'auto' : 'smooth' });
+}
+
+/** Куда ведут кнопки прямо сейчас: индексы заголовков (или -1 — некуда). */
+function jumpTargets(headings) {
+  const line = jumpLine();
+  const tops = headings.map((el) => el.getBoundingClientRect().top);
+
+  let current = -1;
+  let next = -1;
+  tops.forEach((top, i) => {
+    if (top < line + JUMP.slack) current = i;
+    else if (next < 0) next = i;
+  });
+
+  // группа только началась — значит, вверх это уже предыдущая группа
+  const up = (current >= 0 && tops[current] > line - JUMP.near) ? current - 1 : current;
+  return { up, next };
+}
+
+function setJumpBtn(btn, label, text, hint) {
+  btn.hidden = !text;
+  if (!text) return;
+  label.textContent = text;
+  btn.setAttribute('aria-label', hint);
+  btn.title = hint;
+}
+
+/** Куда человек едет сейчас: 'down' или 'up'. Мелкое дрожание не в счёт —
+    направление меняется, только если проехали в обратную сторону заметно. */
+let jumpDir = 'down';
+let jumpFrom = 0;
+
+function jumpDirection() {
+  const y = window.scrollY;
+  const delta = y - jumpFrom;
+  if (Math.abs(delta) >= JUMP.turn) {
+    jumpDir = delta > 0 ? 'down' : 'up';
+    jumpFrom = y;
+  } else if ((jumpDir === 'down' && y > jumpFrom) || (jumpDir === 'up' && y < jumpFrom)) {
+    jumpFrom = y;   // едем в ту же сторону — отсчёт разворота ведём от текущего места
+  }
+  return jumpDir;
+}
+
+function updateJump() {
+  const box = $('#jump');
+  const headings = Array.from(document.querySelectorAll('#list .year'));
+  const goingUp = jumpDirection() === 'up';
+
+  // кнопка висит сразу под панелью фильтров, а её высота зависит от экрана
+  box.style.setProperty('--jump-top', Math.round(jumpLine() + 4) + 'px');
+
+  if (!headings.length || window.scrollY <= JUMP.show) {
+    box.classList.remove('jump--on');
+    return;
+  }
+
+  const { up, next } = jumpTargets(headings);
+
+  // выше первой группы ничего нет — тогда стрелка вверх просто возвращает в начало
+  const upTitle = up >= 0 ? jumpTitle(headings[up]) : 'Наверх';
+  setJumpBtn($('#jump-up'), $('#jump-up-label'), goingUp ? upTitle : '',
+    up >= 0 ? 'Вверх, к группе «' + upTitle + '»' : 'В начало страницы');
+
+  const nextTitle = next >= 0 ? jumpTitle(headings[next]) : '';
+  setJumpBtn($('#jump-down'), $('#jump-down-label'), goingUp ? '' : nextTitle,
+    'Вниз, к группе «' + nextTitle + '»');
+
+  // показывать нечего: листаем вниз, а групп ниже уже не осталось
+  const visible = goingUp ? !$('#jump-up').hidden : !$('#jump-down').hidden;
+  box.classList.toggle('jump--on', visible);
+}
+
+/** Прокрутка сыплет событиями чаще, чем браузер рисует кадры, поэтому
+    пересчитываем подписи не чаще раза на кадр. */
+let jumpWaiting = false;
+
+function scheduleJumpUpdate() {
+  if (jumpWaiting) return;
+  jumpWaiting = true;
+  requestAnimationFrame(() => { jumpWaiting = false; updateJump(); });
+}
+
+function bindJump() {
+  $('#jump-up').addEventListener('click', () => {
+    const headings = Array.from(document.querySelectorAll('#list .year'));
+    const { up } = jumpTargets(headings);
+    if (up >= 0) scrollToHeading(headings[up]);
+    else scrollPage(0);
+  });
+
+  $('#jump-down').addEventListener('click', () => {
+    const headings = Array.from(document.querySelectorAll('#list .year'));
+    const { next } = jumpTargets(headings);
+    if (next >= 0) scrollToHeading(headings[next]);
+  });
+
+  window.addEventListener('scroll', scheduleJumpUpdate, { passive: true });
+  window.addEventListener('resize', scheduleJumpUpdate);
+}
+
+/* --------------------------------------------------------------------------
+   8. Фильтры, переключатели, тема
    -------------------------------------------------------------------------- */
 
 /** Пункты выпадающего списка из значений всех игр, с числом игр у каждого.
@@ -753,7 +1029,7 @@ function optionsFrom(games, pick) {
   games.forEach((game) => pick(game).forEach((raw) => {
     const key = norm(raw);
     if (!key) return;
-    const item = counts.get(key) || { key, label: raw, n: 0 };
+    const item = counts.get(key) || { key, label: labelOf(raw), n: 0 };
     item.n++;
     counts.set(key, item);
   }));
@@ -796,15 +1072,35 @@ function renderPicked(box, picked) {
   ).join('');
 }
 
+/** Поля фильтров-списков делаются из CONFIG.pickFilters, чтобы новый фильтр
+    добавлялся одной строкой настроек, а не правкой разметки.
+    Встают перед сортировкой — она всегда последняя в панели. */
+function ensurePickFields() {
+  const sortField = $('#field-sort');
+  CONFIG.pickFilters.forEach((f) => {
+    if ($('#field-' + f.id)) return;
+    const field = document.createElement('p');
+    field.className = 'field';
+    field.id = 'field-' + f.id;
+    field.hidden = true;
+    field.innerHTML = '<label for="' + esc(f.id) + '">' + esc(f.label) + '</label>' +
+      '<select id="' + esc(f.id) + '"><option value="">' + esc(f.empty) + '</option></select>';
+    sortField.parentNode.insertBefore(field, sortField);
+  });
+}
+
 function fillFilters(games) {
+  ensurePickFields();
   state.genreOptions = optionsFrom(games, (g) => g.genres);
   renderGenreControls();
 
-  const roles = optionsFrom(games, (g) => g.roles);
-  $('#role').innerHTML = '<option value="">любая</option>' +
-    roles.map((o) => optionHtml(o)).join('');
-  state.roles = roles.map((o) => o.key);
-  $('#field-role').hidden = !roles.length;
+  CONFIG.pickFilters.forEach((f) => {
+    const options = optionsFrom(games, (g) => g.picks[f.id]);
+    state.pickOptions[f.id] = options;
+    $('#' + f.id).innerHTML = '<option value="">' + esc(f.empty) + '</option>' +
+      options.map(optionHtml).join('');
+    $('#field-' + f.id).hidden = !options.length;
+  });
 
   setupScoreSlider(games);
 }
@@ -824,17 +1120,34 @@ function setupScoreSlider(games) {
 
   const slider = $('#score');
   state.scoreMax = Math.max(
-    CONFIG.minScoreDefault, CONFIG.scoreWhenMissing, Math.ceil(Math.max(...scores)));
+    CONFIG.scoreDefault, CONFIG.scoreWhenMissing, Math.ceil(Math.max(...scores)));
+  slider.min = String(CONFIG.scoreMin);
   slider.max = String(state.scoreMax);
   slider.step = scores.some((s) => !Number.isInteger(s)) ? '0.5' : '1';
+  renderScoreTicks();
   field.hidden = false;
 }
 
+/** Подписи делений под ползунком — чтобы шкала была видна без движения ручки. */
+function renderScoreTicks() {
+  const ticks = [];
+  for (let n = CONFIG.scoreMin; n <= state.scoreMax; n++) ticks.push(n);
+  $('#score-ticks').innerHTML = ticks.map((n) => '<span>' + n + '</span>').join('');
+}
+
+/* Подпись под ползунком. На самой левой ступени порог никого не отсекает —
+   говорим об этом шуткой, а не сухим «показаны все». */
+const SCORE_HINT_DEFAULT = 'можете оставить только хорошие';
+const SCORE_HINT_ALL = 'А сертификаты Русского Медвежонка надо показывать?';
+
 /** Ставит порог важности и подписывает его рядом с ползунком. */
 function applyScore(value) {
-  state.minScore = Math.min(Math.max(value, 0), state.scoreMax);
+  state.minScore = Math.min(Math.max(value, CONFIG.scoreMin), state.scoreMax);
   $('#score').value = String(state.minScore);
   $('#score-out').textContent = showNumber(state.minScore);
+  $('#score-hint').textContent = state.minScore <= CONFIG.scoreMin
+    ? SCORE_HINT_ALL
+    : SCORE_HINT_DEFAULT;
 }
 
 /** Кнопка «показать спрятанные поля». Подпись берём из самой таблицы. */
@@ -870,8 +1183,10 @@ function syncUrl() {
   if (state.q) p.set('q', state.q);
   if (state.include.length) p.set('g', state.include.join(','));
   if (state.exclude.length) p.set('x', state.exclude.join(','));
-  if (state.role) p.set('r', state.role);
-  if (state.minScore !== CONFIG.minScoreDefault) p.set('s', String(state.minScore));
+  CONFIG.pickFilters.forEach((f) => {
+    if (state.picked[f.id]) p.set(f.id, state.picked[f.id]);
+  });
+  if (state.minScore !== CONFIG.scoreDefault) p.set('s', String(state.minScore));
   if (state.sort !== CONFIG.sortDefault) p.set('sort', state.sort);
   const qs = p.toString();
   history.replaceState(null, '', qs ? '?' + qs : location.pathname);
@@ -887,11 +1202,11 @@ function readUrl() {
   state.q = norm(p.get('q') || '');
   state.include = splitKeys(p.get('g'));
   state.exclude = splitKeys(p.get('x'));
-  state.role = norm(p.get('r') || '');
+  CONFIG.pickFilters.forEach((f) => { state.picked[f.id] = norm(p.get(f.id) || ''); });
 
   const min = parseScore(p.get('s'));
-  state.minScore = min === null ? CONFIG.minScoreDefault : min;
-  state.sort = p.get('sort') === 'score' ? 'score' : CONFIG.sortDefault;
+  state.minScore = min === null ? CONFIG.scoreDefault : min;
+  state.sort = p.get('sort') === 'date' ? 'date' : CONFIG.sortDefault;
 
   $('#q').value = p.get('q') || '';
 }
@@ -902,8 +1217,11 @@ function applyControls() {
   state.exclude = state.exclude.filter((k) => known.includes(k));
   renderGenreControls();
 
-  if (state.roles.includes(state.role)) $('#role').value = state.role;
-  else { state.role = ''; $('#role').value = ''; }
+  CONFIG.pickFilters.forEach((f) => {
+    const known = (state.pickOptions[f.id] || []).some((o) => o.key === state.picked[f.id]);
+    if (!known) state.picked[f.id] = '';
+    $('#' + f.id).value = state.picked[f.id];
+  });
 
   applyScore(state.minScore);
   $('#sort').value = state.sort;
@@ -929,7 +1247,28 @@ function bindGenrePicker(select, box, key) {
   });
 }
 
+/** Возвращает панель в исходное состояние: видны все игры. */
+function resetFilters() {
+  state.q = '';
+  state.include = [];
+  state.exclude = [];
+  state.sort = CONFIG.sortDefault;
+  $('#q').value = '';
+  renderGenreControls();
+  CONFIG.pickFilters.forEach((f) => {
+    state.picked[f.id] = '';
+    $('#' + f.id).value = '';
+  });
+  $('#sort').value = state.sort;
+  applyScore(CONFIG.scoreDefault);
+  render();
+  syncUrl();
+}
+
 function bindEvents() {
+  bindJump();
+  ensurePickFields();
+
   $('#q').addEventListener('input', (e) => {
     state.q = norm(e.target.value);
     render();
@@ -939,10 +1278,12 @@ function bindEvents() {
   bindGenrePicker($('#genre-in'), $('#genre-in-picked'), 'include');
   bindGenrePicker($('#genre-out'), $('#genre-out-picked'), 'exclude');
 
-  $('#role').addEventListener('change', (e) => {
-    state.role = e.target.value;
-    render();
-    syncUrl();
+  CONFIG.pickFilters.forEach((f) => {
+    $('#' + f.id).addEventListener('change', (e) => {
+      state.picked[f.id] = e.target.value;
+      render();
+      syncUrl();
+    });
   });
 
   $('#score').addEventListener('input', (e) => {
@@ -957,16 +1298,14 @@ function bindEvents() {
     syncUrl();
   });
 
-  $('#reset').addEventListener('click', () => {
-    state.q = state.role = '';
-    state.include = [];
-    state.exclude = [];
-    state.sort = CONFIG.sortDefault;
-    $('#q').value = '';
-    renderGenreControls();
-    $('#role').value = '';
-    $('#sort').value = state.sort;
-    applyScore(CONFIG.minScoreDefault);
+  $('#reset').addEventListener('click', resetFilters);
+
+  // кнопки в подписи под списком: подпись перерисовывается, поэтому слушаем блок
+  $('#more').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-more]');
+    if (!btn) return;
+    if (btn.dataset.more === 'reset') { resetFilters(); return; }
+    applyScore(CONFIG.scoreMin);
     render();
     syncUrl();
   });
@@ -1008,7 +1347,7 @@ function showError(err) {
 }
 
 /* --------------------------------------------------------------------------
-   8. Старт
+   9. Старт
    -------------------------------------------------------------------------- */
 
 async function init() {
@@ -1029,6 +1368,7 @@ async function init() {
   state.games = model.games;
 
   renderHeroLinks(model.links);
+  collectLabels(model.games);
   fillFilters(model.games);
   setupExtraToggle(model.games);
   readUrl();
