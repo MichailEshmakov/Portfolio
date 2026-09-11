@@ -23,6 +23,7 @@
   --radius:      14px;
   --label:       190px;    /* ширина колонки с названиями полей внутри карточки */
   --card-gap:    14px;
+  --icon:        46px;    /* иконка игры в шапке карточки */
 
   /* типографика */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -374,17 +375,28 @@ input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visib
 
 .card__head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  align-items: center;
   gap: 12px;
 }
 .card__title {
   margin: 0;
+  flex: 1 1 auto;
   font-size: 19px;
   line-height: 1.25;
   letter-spacing: -.01em;
 }
 .card__year { flex: none; color: var(--muted); font-size: 13px; }
+
+/* иконка игры — та же картинка, что и на площадке */
+.card__icon {
+  flex: none;
+  width: var(--icon);
+  height: var(--icon);
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--chip);
+}
 
 .card__shots {
   display: flex;
@@ -468,6 +480,7 @@ body.show-extra .prop--extra { display: grid; }
   .filters .field { flex: 1 1 140px; }
   .count { margin-left: 0; }
   .card { padding: 14px 16px 16px; }
+  .card__head { --icon: 38px; }
   .prop { grid-template-columns: 1fr; gap: 2px; }
   .prop dt { font-size: 13px; }
   .card__shots img { width: 100%; }

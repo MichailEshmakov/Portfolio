@@ -67,6 +67,13 @@ const CONFIG = {
      ссылкой на файл или именем файла из этой папки («arena-1.png»). */
   imageDir: 'assets/img/',
 
+  /* Список картинок, которые лежат в папке сайта: игра → иконка и скрины.
+     Страница — статическая, содержимое папки она прочитать не может,
+     поэтому список лежит рядом отдельным файлом (assets/img/images.json).
+     Колонка «Скрины» в таблице при этом работает по-прежнему:
+     картинки оттуда просто добавляются к найденным в папке. */
+  imagesFile: 'assets/img/images.json',
+
   /* Из какой колонки собирается выпадающий список фильтра
      (и запасная колонка, если основной в таблице не оказалось). */
   filterField: 'genre',
@@ -144,6 +151,18 @@ function asImage(url) {
   return null;
 }
 
+/** Имя файла из папки сайта → адрес для <img>. В именах есть пробелы
+    и кириллица — их надо закодировать, иначе часть хостингов отдаёт 404.
+    Уже закодированное имя оставляем как есть. */
+function imagePath(name) {
+  const clean = String(name || '').trim().replace(/\\/g, '/').replace(/^[./]+/, '');
+  if (!clean) return '';
+  const parts = clean.split('/').map(
+    (part) => (/%[0-9a-f]{2}/i.test(part) ? part : encodeURIComponent(part))
+  );
+  return CONFIG.imageDir + parts.join('/');
+}
+
 /** Имена файлов из колонки «Скрины» → адреса картинок в папке сайта.
     Всё, что не похоже на имя картинки, пропускаем: в ячейке может быть
     и обычная заметка. */
@@ -152,7 +171,7 @@ function localImages(value) {
     .split(/[,;|\r\n]+/)
     .map((part) => part.trim())
     .filter((part) => part && !HAS_URL.test(part) && IMG_RE.test(part))
-    .map((name) => CONFIG.imageDir + name.replace(/^[.\\/]+/, ''));
+    .map((name) => imagePath(name));
 }
 
 /** Для колонки со скринами: чего не узнали — всё равно пробуем показать
@@ -270,6 +289,62 @@ async function loadCsv() {
   throw lastError || new Error('не удалось загрузить таблицу');
 }
 
+/** Список картинок из папки сайта: игра → иконка и скрины.
+    Файла нет или он сломан — просто работаем без картинок из папки,
+    колонка «Скрины» в таблице от этого не страдает. */
+async function loadImages() {
+  try {
+    const res = await fetch(CONFIG.imagesFile, { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    return buildImageIndex(data && data.games ? data.games : data);
+  } catch {
+    return new Map();
+  }
+}
+
+/** Одна запись списка: «файл», ['файл', 'файл'] или {icon, shots}. */
+function imageEntry(raw) {
+  const list = (value) => (Array.isArray(value) ? value : [value])
+    .filter((v) => typeof v === 'string' && v.trim());
+
+  if (!raw) return null;
+  if (typeof raw === 'string' || Array.isArray(raw)) return { icon: '', shots: list(raw) };
+  return {
+    icon: typeof raw.icon === 'string' ? raw.icon.trim() : '',
+    shots: list(raw.shots !== undefined ? raw.shots : raw.shot),
+  };
+}
+
+/** Короткое имя игры — то, что стоит до первого разделителя:
+    «Крутой побег. Обби, блин.» → «крутой побег». Нужно, чтобы картинки
+    не отвалились, если в таблице подрежут хвост названия. */
+function shortTitleKey(title) {
+  return norm(String(title).split(/[.:|\/]|—|–|,\s/)[0]);
+}
+
+/** Названия игр → картинки. Сравниваем так же нестрого, как названия колонок:
+    регистр, ё/е и лишние пробелы не важны. */
+function buildImageIndex(map) {
+  const index = new Map();
+  const shorts = new Map();
+
+  Object.keys(map || {}).forEach((title) => {
+    const entry = imageEntry(map[title]);
+    if (!entry || (!entry.icon && !entry.shots.length)) return;
+
+    const key = norm(title);
+    index.set(key, entry);
+
+    const short = shortTitleKey(title);
+    // короткое имя годится, только если оно ведёт к одной-единственной игре
+    if (short && short !== key) shorts.set(short, shorts.has(short) ? null : entry);
+  });
+
+  shorts.forEach((entry, key) => { if (entry && !index.has(key)) index.set(key, entry); });
+  return index;
+}
+
 /* --------------------------------------------------------------------------
    5. Понимание таблицы: где шапка, что за колонки, где года
    -------------------------------------------------------------------------- */
@@ -376,7 +451,7 @@ function detectYearRow(cells, titleCol, roleOf) {
   return match ? match[0] : null;
 }
 
-function buildModel(csvText) {
+function buildModel(csvText, folderImages) {
   const rows = parseCsv(csvText);
   const headerIndex = findHeaderRow(rows);
   const header = rows[headerIndex] || [];
@@ -435,12 +510,18 @@ function buildModel(csvText) {
       if (f.role === 'shots') localImages(f.value).forEach((src) => add(src));
     });
 
+    // Картинки, которые лежат в папке сайта: иконка отдельно, скрины — в галерею.
+    const folder = (folderImages && folderImages.get(norm(title))) || null;
+    if (folder) folder.shots.forEach((name) => add(imagePath(name)));
+
+
     games.push({
       title,
       year,
       fields,
       byRole,
       images,
+      icon: folder && folder.icon ? imagePath(folder.icon) : '',
       hue: hueOf(title),
       order: games.length,          // порядок строк в таблице — он же порядок по дате
       score: rated === null ? CONFIG.scoreWhenMissing : rated,
@@ -531,8 +612,13 @@ function cardHtml(game) {
       '" target="_blank" rel="noopener">' + esc(a.label) + '</a>')
     .join('');
 
+  const icon = game.icon
+    ? '<img class="card__icon" src="' + esc(game.icon) + '" alt="" loading="lazy" decoding="async">'
+    : '';
+
   return '<article class="card" style="--hue:' + game.hue + '">' +
     '<header class="card__head">' +
+      icon +
       '<h3 class="card__title">' + esc(game.title) + '</h3>' +
       (game.year ? '<span class="card__year">' + esc(game.year) + '</span>' : '') +
     '</header>' +
@@ -597,6 +683,11 @@ function render() {
 /** Файлообменник не отдал картинку — вместо битого скрина показываем ссылку,
     по которой её всё-таки можно открыть. */
 function bindShotFallbacks() {
+  // иконка не загрузилась — убираем её, карточка остаётся как была
+  document.querySelectorAll('.card__icon').forEach((icon) => {
+    icon.addEventListener('error', () => icon.remove(), { once: true });
+  });
+
   document.querySelectorAll('.card__shots img').forEach((img) => {
     img.addEventListener('error', () => {
       const link = img.closest('.shot');
@@ -899,6 +990,7 @@ async function init() {
   bindEvents();
 
   let data;
+  const imagesPromise = loadImages();   // список картинок грузится параллельно
   try {
     data = await loadCsv();
   } catch (err) {
@@ -906,7 +998,7 @@ async function init() {
     return;
   }
 
-  const model = buildModel(data.text);
+  const model = buildModel(data.text, await imagesPromise);
   state.games = model.games;
 
   renderHeroLinks(model.links);

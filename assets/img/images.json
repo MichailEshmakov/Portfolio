@@ -1,0 +1,34 @@
+{
+  "games": {
+    "Поезд":                                      { "icon": "2026/The train Icon.png",                 "shots": ["2026/The train Screenshot.gif"] },
+    "External Avatar":                            { "icon": "2026/External Avatar Icon.png",           "shots": ["2026/External Avatar Screenshot.gif"] },
+    "Ant Simulator":                              { "icon": "2026/Ant Simulator Icon.png",             "shots": ["2026/Ant Simulator Screenshot.gif"] },
+    "Тайная Москва":                              { "icon": "2026/Secret Moscow Icon.png",             "shots": ["2026/Secret Moscow Sceenshot.gif"] },
+    "Копать-колотить: АФК блоки":                 { "icon": "2026/Dig and mine Icon.png",              "shots": ["2026/Dig and mine Screenshot.gif"] },
+    "Гдетто":                                     { "icon": "2026/Gdetto Icon.png",                    "shots": ["2026/Gdetto Screenshot.png"] },
+
+    "Соседний Район":                             { "icon": "2025/Wrong District Icon.png",            "shots": ["2025/Wrong District Screenshot.gif"] },
+    "Крути да верти":                             { "icon": "2025/Крути верти Icon.png",               "shots": ["2025/Крути верти Screenshot.gif"] },
+    "Я хочу быть пылесосом":                      { "icon": "2025/Vacuumer Icon.png",                  "shots": ["2025/Vacuumer Screenshot.gif"] },
+    "Мемы дуреют с этой прикормки":               { "icon": "2025/Memes Cafe Icon.png",                "shots": ["2025/Memes Cafe Screenshot.gif"] },
+
+    "Крутой побег. Обби, блин.":                  { "icon": "2024/Prison Escape Icon.png",             "shots": ["2024/Prison Escape Screenshot.gif"] },
+    "Fate: Rise of Heroes. Match for glory":      { "icon": "2024/Rise of Heroes Icon.jpg",            "shots": ["2024/Rise of Heroes Screenshot.jpg"] },
+    "Телекинез Спасение!":                        { "icon": "2024/Телекинез Спасение Icon.png",        "shots": ["2024/Телекинез Спасение Screenshot.gif"] },
+    "Шум дождя. Звук на фон для релакса и работы":{ "icon": "2024/Rain Noise Icon.png",                "shots": ["2024/Rain Noise Screenshot.jpg"] },
+    "Построй лабиринт":                           { "icon": "2024/Build A Maze Icon.png",              "shots": ["2024/Build A Maze Screenshot.gif"] },
+    "Белый шум поможет спать ребенку":            { "icon": "2024/White Noise Icon.png",               "shots": ["2024/White Noise Screenshot.png"] },
+
+    "Цветной след за черным шаром. Расслабься":   { "icon": "2024/Raninball Icon.png",                 "shots": ["2024/Raninball Screenshot.png.gif"] },
+    "Прыг Клик / Двоечник пытается считать":      { "icon": "2023/Прыг Клик Icon.jpg",                 "shots": ["2023/Прыг Клик Screenshot.png"] },
+    "Autobattle Dungeon AFK RPG":                 { "icon": "2023/Autobattle Dungeon AFK RPG Icon.png","shots": ["2023/Autobattle Dungeon AFK RPG Screenshot.png"] },
+
+    "Necromancer: raise your army":               { "icon": "2022/Necromancer raise your army Icon.png",   "shots": ["2022/Necromancer raise your army Screenshot.png"] },
+    "My Cute Pony Farm: Pony Game":               { "icon": "2022/My Cute Pony Farm Pony Game Icon.png",   "shots": ["2022/My Cute Pony Farm Pony Game Screenshot.png"] },
+    "Fruit Hills":                                { "icon": "2022/Fruit Hills Icon.png",               "shots": ["2022/Fruit Hills Screenshot.png"] },
+
+    "Купи еду, продай еду!":                      { "icon": "2022/Fruits Exchange Icon.png",           "shots": ["2022/Fruits Exchange Screenshot.gif"] },
+
+    "Эпоха раздора":                              { "icon": "2014/Age Of Discord Icon.jpg",            "shots": ["2014/Age Of Discord Screenshot.jpg"] }
+  }
+}
