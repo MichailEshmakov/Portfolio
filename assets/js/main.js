@@ -90,6 +90,9 @@ const CONFIG = {
   /* Порядок по умолчанию: сначала года, внутри года — по важности. */
   sortDefault: 'date',
 
+  /* Сколько картинок качаем одновременно. 1 — строго по очереди сверху вниз. */
+  shotsAtOnce: 1,
+
   cacheKey: 'portfolio-sheet-cache-v1',
 };
 
@@ -599,7 +602,8 @@ function cardHtml(game) {
     ? '<div class="card__shots">' + game.images.map((img) =>
         '<a class="shot" href="' + esc(img.url) + '" target="_blank" rel="noopener" ' +
         'data-fallback="' + esc(prettyUrl(img.url)) + '">' +
-        '<img src="' + esc(img.src) + '" alt="" loading="lazy"></a>').join('') + '</div>'
+        '<img class="shot__img" data-src="' + esc(img.src) + '" alt="" decoding="async">' +
+        '</a>').join('') + '</div>'
     : '';
 
   // Ссылки из колонки со скринами кнопками не дублируем: они уже в галерее,
@@ -613,7 +617,7 @@ function cardHtml(game) {
     .join('');
 
   const icon = game.icon
-    ? '<img class="card__icon" src="' + esc(game.icon) + '" alt="" loading="lazy" decoding="async">'
+    ? '<img class="card__icon" data-src="' + esc(game.icon) + '" alt="" decoding="async">'
     : '';
 
   return '<article class="card" style="--hue:' + game.hue + '">' +
@@ -622,9 +626,11 @@ function cardHtml(game) {
       '<h3 class="card__title">' + esc(game.title) + '</h3>' +
       (game.year ? '<span class="card__year">' + esc(game.year) + '</span>' : '') +
     '</header>' +
-    gallery +
-    (props ? '<dl class="props">' + props + '</dl>' : '') +
-    (actions ? '<div class="card__actions">' + actions + '</div>' : '') +
+    '<div class="card__body">' +
+      gallery +
+      (props ? '<dl class="props">' + props + '</dl>' : '') +
+      (actions ? '<div class="card__actions">' + actions + '</div>' : '') +
+    '</div>' +
   '</article>';
 }
 
@@ -672,7 +678,7 @@ function render() {
     '</section>'
   ).join('');
 
-  bindShotFallbacks();
+  loadShotsInOrder();
 
   $('#empty').hidden = visible.length > 0;
   $('#count').textContent = visible.length === state.games.length
@@ -680,22 +686,43 @@ function render() {
     : visible.length + ' из ' + state.games.length;
 }
 
-/** Файлообменник не отдал картинку — вместо битого скрина показываем ссылку,
-    по которой её всё-таки можно открыть. */
-function bindShotFallbacks() {
-  // иконка не загрузилась — убираем её, карточка остаётся как была
-  document.querySelectorAll('.card__icon').forEach((icon) => {
-    icon.addEventListener('error', () => icon.remove(), { once: true });
-  });
+/** Картинки грузятся не все разом, а по очереди — в том порядке, в каком
+    сейчас идут карточки. Сначала иконки (их видно сразу, они лёгкие),
+    потом скрины: тяжёлая гифка из середины списка не мешает посмотреть
+    верхние карточки, а пока читаешь плашку, её скрин уже подгружается.
+    Перерисовали список (фильтр, сортировка) — старая очередь бросается
+    и начинается новая, в новом порядке. */
+let shotQueue = 0;
 
-  document.querySelectorAll('.card__shots img').forEach((img) => {
-    img.addEventListener('error', () => {
-      const link = img.closest('.shot');
-      if (!link) return;
-      link.classList.add('shot--link');
-      link.textContent = link.dataset.fallback;
-    }, { once: true });
-  });
+function loadShotsInOrder() {
+  const token = ++shotQueue;
+  const pick = (sel) => Array.from(document.querySelectorAll(sel + '[data-src]'));
+  const queue = [...pick('.card__icon'), ...pick('.shot__img')];
+  let at = 0;
+
+  const next = () => {
+    if (token !== shotQueue) return;     // список перерисовали — эта очередь уже не нужна
+    const img = queue[at++];
+    if (!img) return;
+
+    const src = img.dataset.src;
+    img.removeAttribute('data-src');
+    img.addEventListener('load', next, { once: true });
+    img.addEventListener('error', () => { showShotFallback(img); next(); }, { once: true });
+    img.src = src;
+  };
+
+  // столько картинок качаем одновременно: 1 — строго по очереди, сверху вниз
+  for (let i = 0; i < CONFIG.shotsAtOnce; i++) next();
+}
+
+/** Картинка не открылась: иконка просто исчезает, а на месте скрина
+    остаётся ссылка, по которой его всё-таки можно посмотреть. */
+function showShotFallback(img) {
+  const link = img.closest('.shot');
+  if (!link) { img.remove(); return; }
+  link.classList.add('shot--link');
+  link.textContent = link.dataset.fallback;
 }
 
 function matches(game) {

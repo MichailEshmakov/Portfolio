@@ -21,9 +21,10 @@
   /* геометрия */
   --wrap:        1020px;   /* ширина колонки страницы */
   --radius:      14px;
-  --label:       190px;    /* ширина колонки с названиями полей внутри карточки */
+  --label:       165px;    /* ширина колонки с названиями полей внутри карточки */
   --card-gap:    14px;
   --icon:        46px;    /* иконка игры в шапке карточки */
+  --shot:        400px;   /* ширина скрина справа в карточке */
 
   /* типографика */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -398,11 +399,21 @@ input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visib
   background: var(--chip);
 }
 
-.card__shots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* тело карточки: скрин справа, поля слева обтекают его
+   и продолжаются под ним, если их много */
+.card__body {
+  display: flow-root;
   margin-top: 14px;
+}
+
+.card__shots {
+  float: right;
+  width: var(--shot);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 12px 20px;
 }
 .shot { display: block; }
 
@@ -419,25 +430,27 @@ input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visib
 }
 
 .card__shots img {
-  width: 190px;
+  width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid var(--line);
+  /* место под картинку занято сразу — пока она грузится, карточка не прыгает */
+  background: var(--chip);
 }
 
 /* строки «поле → значение» */
 .props {
-  display: grid;
-  gap: 8px;
-  margin: 14px 0 0;
+  margin: 0;
 }
 .prop {
   display: grid;
   grid-template-columns: var(--label) 1fr;
   gap: 16px;
   align-items: start;
+  margin-bottom: 8px;
 }
+.prop:last-child { margin-bottom: 0; }
 .prop dt {
   color: var(--muted);
   font-size: 14px;
@@ -481,9 +494,10 @@ body.show-extra .prop--extra { display: grid; }
   .count { margin-left: 0; }
   .card { padding: 14px 16px 16px; }
   .card__head { --icon: 38px; }
+  /* узкий экран — скрин не сбоку, а сверху, во всю ширину карточки */
+  .card__shots { float: none; width: auto; margin: 0 0 14px; }
   .prop { grid-template-columns: 1fr; gap: 2px; }
   .prop dt { font-size: 13px; }
-  .card__shots img { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
