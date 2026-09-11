@@ -4,41 +4,90 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Портфолио — игры</title>
-<meta name="description" content="Портфолио разработчика игр: список проектов, платформы, ссылки на игру и исходники.">
+<meta name="description" content="Портфолио разработчика игр: проекты по годам, роли, платформы, технологии.">
 <meta property="og:title" content="Портфолио — игры">
-<meta property="og:description" content="Список игр, которые я сделал.">
+<meta property="og:description" content="Проекты по годам, роли, платформы, технологии.">
 <meta property="og:type" content="website">
+<meta name="color-scheme" content="dark light">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎮</text></svg>">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<a class="skip" href="#games">К списку игр</a>
+<a class="skip" href="#list">К списку игр</a>
 
 <header class="hero">
-  <div class="wrap">
-    <p class="hero__role" data-profile="role"></p>
-    <h1 class="hero__name" data-profile="name"></h1>
-    <p class="hero__tagline" data-profile="tagline"></p>
-    <nav class="hero__links" data-profile="links" aria-label="Контакты"></nav>
+  <div class="wrap hero__inner">
+    <div class="hero__text">
+      <p class="hero__role" id="hero-role">Разработчик игр · Unity / C#</p>
+      <h1 class="hero__name" id="hero-name">Михаил</h1>
+    </div>
+    <nav class="hero__links" id="hero-links" aria-label="Ссылки"></nav>
   </div>
+  <button class="theme" id="theme" type="button" title="Сменить тему" aria-label="Сменить тему">◐</button>
 </header>
 
-<main class="wrap">
-  <section id="games" aria-labelledby="games-title">
-    <div class="section-head">
-      <h2 id="games-title">Игры</h2>
-      <div class="filters" id="filters" role="group" aria-label="Фильтр по платформе"></div>
+<div class="toolbar" id="toolbar">
+  <div class="wrap toolbar__inner">
+    <div class="toolbar__top">
+      <p class="field field--search">
+        <label class="sr-only" for="q">Поиск</label>
+        <input id="q" type="search" placeholder="Поиск по любому полю…" autocomplete="off" spellcheck="false">
+      </p>
+      <button class="btn btn--ghost" id="toggle-extra" type="button" aria-pressed="false" hidden>Технологии</button>
+      <button class="btn btn--ghost" id="reset" type="button">Сброс</button>
+      <span class="count" id="count" aria-live="polite"></span>
     </div>
-    <ul class="grid" id="grid"></ul>
-    <p class="empty" id="empty" hidden>Пока ничего нет.</p>
-  </section>
+
+    <div class="filters">
+      <p class="field">
+        <label for="genre-in">Жанр</label>
+        <select id="genre-in"><option value="">любой</option></select>
+        <span class="picked" id="genre-in-picked" hidden></span>
+        <span class="hint" id="genre-in-hint" hidden>подойдёт любой из выбранных</span>
+      </p>
+
+      <p class="field" id="field-genre-out">
+        <label for="genre-out">Кроме жанра</label>
+        <select id="genre-out"><option value="">—</option></select>
+        <span class="picked" id="genre-out-picked" hidden></span>
+        <span class="hint">можно убрать казуальные игры из поиска</span>
+      </p>
+
+      <p class="field" id="field-role" hidden>
+        <label for="role">Роль</label>
+        <select id="role"><option value="">любая</option></select>
+      </p>
+
+      <p class="field" id="field-score" hidden>
+        <label for="score">Важность от <output id="score-out" for="score">1</output></label>
+        <input id="score" type="range" min="0" max="5" step="1" value="1">
+        <span class="hint">можете оставить только хорошие</span>
+      </p>
+
+      <p class="field" id="field-sort">
+        <label for="sort">Сортировка</label>
+        <select id="sort">
+          <option value="date">сначала дата, потом важность</option>
+          <option value="score">сначала важность, потом дата</option>
+        </select>
+      </p>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <p class="status" id="status">Загружаю данные из таблицы…</p>
+  <div id="list" class="list"></div>
+  <p class="empty" id="empty" hidden>Ничего не нашлось. Попробуй изменить запрос или сбросить фильтры.</p>
 </main>
 
 <footer class="footer">
-  <div class="wrap">
-    <p>© <span id="year"></span> <span data-profile="name"></span></p>
+  <div class="wrap footer__inner">
+    <p>© <span id="year"></span> <span id="footer-name">Михаил</span></p>
+    <p class="footer__src">Данные берутся из <a id="sheet-link" href="#" target="_blank" rel="noopener">таблицы</a> при каждой перезагрузке страницы.</p>
   </div>
 </footer>
+
 
 <script src="assets/js/main.js"></script>
 </body>

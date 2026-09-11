@@ -1,17 +1,50 @@
+/* ===========================================================
+   Портфолио — оформление.
+   Всё, что стоит крутить «на глаз», собрано в переменных ниже.
+   Страница — не таблица: каждая игра это карточка,
+   внутри которой строки «название поля → значение».
+   =========================================================== */
+
 :root {
-  color-scheme: light dark;
-  --bg: #0f1115;
-  --bg-soft: #161a21;
-  --line: #262c37;
-  --text: #e7eaf0;
-  --muted: #98a2b3;
-  --accent: #6ea8fe;
-  --accent-ink: #0f1115;
-  --radius: 14px;
-  --wrap: 1080px;
+  /* палитра — тёмная тема по умолчанию */
+  --bg:          #0e1116;
+  --bg-soft:     #151a22;
+  --bg-card:     #171d26;
+  --line:        #262e3a;
+  --text:        #e6ebf2;
+  --muted:       #93a0b3;
+  --accent:      #5aa9ff;
+  --accent-ink:  #06121f;
+  --chip:        #202836;
+  --shadow:      0 1px 2px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.28);
+
+  /* геометрия */
+  --wrap:        1020px;   /* ширина колонки страницы */
+  --radius:      14px;
+  --label:       190px;    /* ширина колонки с названиями полей внутри карточки */
+  --card-gap:    14px;
+
+  /* типографика */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-theme="light"] {
+  --bg:         #f5f7fa;
+  --bg-soft:    #ffffff;
+  --bg-card:    #ffffff;
+  --line:       #e2e7ee;
+  --text:       #17202c;
+  --muted:      #5d6a7c;
+  --accent:     #1668d6;
+  --accent-ink: #ffffff;
+  --chip:       #eef2f7;
+  --shadow:     0 1px 2px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.08);
 }
 
 * { box-sizing: border-box; }
+
+/* display у кнопок и полей сильнее браузерного правила для [hidden] */
+[hidden] { display: none !important; }
 
 html { scroll-behavior: smooth; }
 
@@ -19,13 +52,14 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+  font: 16px/1.55 var(--font);
   -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
 }
 
-img { max-width: 100%; display: block; }
-
 a { color: var(--accent); }
+
+img { max-width: 100%; display: block; }
 
 .wrap {
   width: 100%;
@@ -34,170 +68,410 @@ a { color: var(--accent); }
   padding-inline: 20px;
 }
 
-.skip {
-  position: absolute;
-  left: -9999px;
-}
-.skip:focus {
-  left: 12px;
-  top: 12px;
-  z-index: 10;
-  background: var(--accent);
-  color: var(--accent-ink);
-  padding: 8px 14px;
-  border-radius: 8px;
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* Шапка */
+.skip {
+  position: absolute; left: -9999px; top: 0;
+  background: var(--accent); color: var(--accent-ink);
+  padding: 10px 16px; z-index: 100;
+}
+.skip:focus { left: 0; }
+
+/* ---------- шапка ---------- */
+
 .hero {
+  position: relative;
+  background:
+    radial-gradient(900px 380px at 12% -20%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%),
+    var(--bg-soft);
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #171c26 0%, var(--bg) 100%);
-  padding-block: 72px 56px;
 }
+
+.hero__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding-block: 48px 34px;
+}
+
+.hero__text { min-width: 0; }
+
 .hero__role {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--muted);
+  font-size: 13.5px;
+  letter-spacing: .06em;
   text-transform: uppercase;
-  letter-spacing: .08em;
-  font-size: 13px;
 }
+
 .hero__name {
   margin: 0;
-  font-size: clamp(30px, 6vw, 50px);
+  font-size: clamp(30px, 5vw, 44px);
   line-height: 1.1;
   letter-spacing: -.02em;
 }
+
 .hero__tagline {
-  margin: 14px 0 0;
-  max-width: 56ch;
+  margin: 10px 0 0;
+  max-width: 52ch;
   color: var(--muted);
-  font-size: 17px;
 }
+
 .hero__links {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 24px;
+  min-width: 0;
 }
-.hero__links a {
+
+.theme {
+  position: absolute;
+  top: 14px; right: 16px;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
   border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 7px 16px;
-  color: var(--text);
-  text-decoration: none;
-  font-size: 14px;
-}
-.hero__links a:hover { border-color: var(--accent); color: var(--accent); }
-
-/* Секция */
-main { padding-block: 48px 64px; }
-
-.section-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.section-head h2 {
-  margin: 0;
-  font-size: 22px;
-  letter-spacing: -.01em;
-}
-
-.filters { display: flex; flex-wrap: wrap; gap: 8px; }
-.filters button {
-  border: 1px solid var(--line);
-  background: transparent;
+  border-radius: 50%;
+  background: var(--bg-card);
   color: var(--muted);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font: inherit;
-  font-size: 14px;
+  font-size: 15px;
   cursor: pointer;
 }
-.filters button:hover { color: var(--text); }
-.filters button[aria-pressed="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
+.theme:hover { color: var(--text); }
 
-/* Карточки */
-.grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-}
+/* ---------- кнопки и чипы ---------- */
 
-.card {
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-soft);
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.card:hover { border-color: #39414f; }
-
-.card__cover {
-  aspect-ratio: 16 / 9;
-  max-width: 100%;
-  background: #1e242e;
-  object-fit: cover;
-}
-.card__cover--empty {
-  display: grid;
-  place-items: center;
-  color: #3d465a;
-  font-size: 34px;
-}
-
-.card__body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
-
-.card__title { margin: 0; font-size: 18px; }
-.card__meta { margin: 0; color: var(--muted); font-size: 13px; }
-.card__summary { margin: 0; color: #c3cad6; font-size: 15px; }
-
-.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.tags li {
-  font-size: 12px;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 2px 8px;
-}
-
-.card__links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 4px; }
-.card__links a {
-  text-decoration: none;
-  font-size: 14px;
-  padding: 7px 14px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-card);
   color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  max-width: 100%;
+  overflow-wrap: anywhere;   /* длинная подпись из таблицы не распирает страницу */
 }
-.card__links a:hover { border-color: var(--accent); }
-.card__links a.primary {
+.btn:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+
+.btn--primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-ink);
   font-weight: 600;
 }
+.btn--ghost { background: transparent; }
 
-.empty { color: var(--muted); }
+/* нажатое состояние переключателя «показать спрятанные поля» */
+.btn--on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
 
-.footer {
-  border-top: 1px solid var(--line);
-  padding-block: 24px;
+.chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* ---------- панель поиска и фильтров ---------- */
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.toolbar__inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-block: 12px;
+}
+
+/* верхняя строка: поиск во всю ширину, справа кнопки и счётчик */
+.toolbar__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+/* фильтры — колонками: подпись, поле, пояснение под ним */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.field--search { flex: 1 1 240px; }
+
+.filters .field {
+  flex: 1 1 165px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.filters .field label { white-space: nowrap; }
+
+/* у сортировки пункты длиннее прочих — даём полю больше места */
+#field-sort { flex: 1 1 230px; }
+
+/* выбранные жанры — чипсами под списком, клик снимает выбор */
+.picked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip--pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.7;
+  cursor: pointer;
+}
+.chip--pick:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.chip--pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.chip--pick span { color: var(--muted); font-size: 14px; line-height: 1; }
+
+/* мелкая подсказка под фильтром: чем он полезен */
+.hint {
+  font-size: 12px;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--muted) 75%, transparent);
+}
+
+/* ползунок важности */
+input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  height: 38px;             /* вровень с соседними полями */
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+output#score-out {
+  display: inline-block;
+  min-width: 1.2em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="search"], select {
+  width: 100%;
+  min-width: 0;              /* иначе длинный пункт списка растягивает страницу */
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+select { width: auto; max-width: 210px; }
+.filters select { width: 100%; max-width: none; }
+input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.count { margin-left: auto; color: var(--muted); font-size: 13.5px; }
+
+/* ---------- сообщения ---------- */
+
+.status { margin: 26px 0 0; color: var(--muted); }
+.status--error {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #e5534b;
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text);
+}
+.status[hidden] { display: none; }
+.status code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--chip);
+  font-size: 13px;
+}
+.status__tech { color: var(--muted); font-size: 13px; }
+
+.empty { color: var(--muted); padding-block: 30px; }
+
+/* ---------- список по годам ---------- */
+
+.list { padding-block: 4px 44px; }
+
+.year {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 30px 0 14px;
+}
+.year h2 {
+  margin: 0;
+  font-size: 21px;
+  letter-spacing: -.01em;
+}
+.year::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.year span { color: var(--muted); font-size: 13px; }
+
+/* ---------- карточка игры ---------- */
+
+.card {
+  border: 1px solid var(--line);
+  border-left: 4px solid hsl(var(--hue, 210) 55% 48%);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  padding: 16px 20px 18px;
+  margin-bottom: var(--card-gap);
+}
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.card__title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -.01em;
+}
+.card__year { flex: none; color: var(--muted); font-size: 13px; }
+
+.card__shots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.shot { display: block; }
+
+/* картинка не открылась — на её месте обычная ссылка */
+.shot--link {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg-card);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.card__shots img {
+  width: 190px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+/* строки «поле → значение» */
+.props {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+.prop {
+  display: grid;
+  grid-template-columns: var(--label) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.prop dt {
   color: var(--muted);
   font-size: 14px;
 }
+.prop dd { margin: 0; }
+
+/* поля под переключателем — по умолчанию свёрнуты */
+.prop--extra { display: none; }
+body.show-extra .prop--extra { display: grid; }
+
+.card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* ---------- подвал ---------- */
+
+.footer {
+  border-top: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+.footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  padding-block: 22px 28px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
 .footer p { margin: 0; }
+
+/* ---------- узкие экраны ---------- */
+
+@media (max-width: 700px) {
+  .hero__inner { padding-block: 34px 24px; }
+  .field--search { flex: 1 1 100%; }
+  .filters .field { flex: 1 1 140px; }
+  .count { margin-left: 0; }
+  .card { padding: 14px 16px 16px; }
+  .prop { grid-template-columns: 1fr; gap: 2px; }
+  .prop dt { font-size: 13px; }
+  .card__shots img { width: 100%; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
