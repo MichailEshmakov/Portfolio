@@ -384,6 +384,10 @@ input[type="search"]:focus, select:focus, .btn:focus-visible, .theme:focus-visib
 }
 .status__tech { color: var(--muted); font-size: 13px; }
 
+/* мелкая пометка «таблица не загрузилась, данные из запасной копии» */
+.status--note { margin: 18px 0 -8px; color: var(--muted); font-size: 12.5px; }
+.footer__stale { color: var(--muted); }
+
 .empty { color: var(--muted); padding-block: 30px; }
 
 /* подпись в самом низу списка: это ещё не все игры */

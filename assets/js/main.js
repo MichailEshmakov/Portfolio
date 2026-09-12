@@ -111,6 +111,14 @@ const CONFIG = {
   /* Сколько картинок качаем одновременно. 1 — строго по очереди сверху вниз. */
   shotsAtOnce: 1,
 
+  /* Запасная копия таблицы, лежащая в самом проекте. Нужна, когда таблица
+     не открывается (нет сети, гугл лёг, сняли доступ по ссылке): страница
+     тогда показывает эту копию, а не пустоту. Порядок такой:
+     живая таблица → последняя удачная загрузка из localStorage → этот файл.
+     Обновляется вручную: «Файл → Скачать → CSV» и положить сюда,
+     либо через update-data.bat из корня папки. */
+  localCsv: 'assets/data/sheet.csv',
+
   cacheKey: 'portfolio-sheet-cache-v1',
 };
 
@@ -322,6 +330,8 @@ function sheetUrls() {
   ];
 }
 
+/** Откуда взялись данные: 'sheet' — живая таблица, 'cache' — прошлая удачная
+    загрузка у этого посетителя, 'local' — копия, лежащая в самой папке сайта. */
 async function loadCsv() {
   let lastError = null;
 
@@ -334,7 +344,7 @@ async function loadCsv() {
       try {
         localStorage.setItem(CONFIG.cacheKey, JSON.stringify({ at: Date.now(), text }));
       } catch { /* приватный режим — просто без кэша */ }
-      return { text, cached: false };
+      return { text, source: 'sheet' };
     } catch (err) {
       lastError = err;
     }
@@ -344,9 +354,20 @@ async function loadCsv() {
     const raw = localStorage.getItem(CONFIG.cacheKey);
     if (raw) {
       const saved = JSON.parse(raw);
-      return { text: saved.text, cached: true, at: saved.at, error: lastError };
+      if (saved && saved.text && saved.text.trim()) {
+        return { text: saved.text, source: 'cache', at: saved.at, error: lastError };
+      }
     }
   } catch { /* нет кэша */ }
+
+  try {
+    const res = await fetch(CONFIG.localCsv, { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (!text.trim()) throw new Error('пустой файл');
+    const at = Date.parse(res.headers.get('last-modified') || '');
+    return { text, source: 'local', at: Number.isNaN(at) ? null : at, error: lastError };
+  } catch { /* нет и копии в папке — значит показываем ошибку */ }
 
   throw lastError || new Error('не удалось загрузить таблицу');
 }
@@ -1324,6 +1345,29 @@ function sheetHref() {
   return 'https://docs.google.com/spreadsheets/d/' + CONFIG.sheetId + '/edit#gid=' + CONFIG.gid;
 }
 
+/** Мелкая пометка о том, откуда данные. Таблица открылась — молчим.
+    Не открылась — одна строка мелким шрифтом над списком и уточнение
+    в подписи внизу страницы; список при этом показан из запасной копии. */
+function showSource(data) {
+  const status = $('#status');
+  const note = $('#footer-source');
+  if (data.source === 'sheet') {
+    status.hidden = true;
+    if (note) note.hidden = true;
+    return;
+  }
+
+  const when = data.at ? ' от ' + new Date(data.at).toLocaleDateString('ru-RU') : '';
+  const where = data.source === 'cache'
+    ? 'сохранённая копия' + when
+    : 'копия из папки сайта' + when;
+
+  status.hidden = false;
+  status.className = 'status status--note';
+  status.textContent = 'Таблица сейчас не загрузилась — показана ' + where + '.';
+  if (note) note.hidden = false;
+}
+
 function showError(err) {
   const status = $('#status');
   const reason = esc(err && err.message ? err.message : err);
@@ -1375,15 +1419,7 @@ async function init() {
   applyControls();
   render();
 
-  const status = $('#status');
-  if (data.cached) {
-    status.hidden = false;
-    status.className = 'status status--error';
-    status.textContent = 'Таблица сейчас недоступна — показаны сохранённые данные от ' +
-      new Date(data.at).toLocaleString('ru-RU') + '.';
-  } else {
-    status.hidden = true;
-  }
+  showSource(data);
 
   if (!model.games.length) {
     $('#empty').hidden = false;
