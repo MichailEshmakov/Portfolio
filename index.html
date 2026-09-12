@@ -54,7 +54,7 @@
       </p>
 
       <!-- сюда скрипт ставит фильтры-списки (роль, 2D/3D, найм, площадка):
-           они описаны в CONFIG.pickFilters в assets/js/main.js -->
+           они описаны в CONFIG.pickFilters в assets/js/config.js -->
 
       <p class="field" id="field-sort">
         <label for="sort">Сортировка</label>
@@ -104,6 +104,18 @@
   </button>
 </nav>
 
-<script src="assets/js/main.js"></script>
+<!-- Модули браузер не грузит из file:// вообще — страница осталась бы пустой
+     и без объяснения. Этот обычный скрипт из file:// работает и всё расскажет. -->
+<script>
+if (location.protocol === 'file:') {
+  document.getElementById('status').innerHTML =
+    '<b>Страница открыта как файл, поэтому браузер не стал её запускать.</b><br>' +
+    'Нужен любой веб-адрес: опубликованный сайт (GitHub Pages) или локальный сервер — ' +
+    'запусти <code>start-local-server.bat</code> из этой папки и открой ' +
+    '<code>http://localhost:8000/</code>.';
+  document.getElementById('status').className = 'status status--error';
+}
+</script>
+<script type="module" src="assets/js/main.js"></script>
 </body>
 </html>
